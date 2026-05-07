@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>Grand Carpet · Araba Takip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --bg: #f5f5f4; --surface: #ffffff; --surface-2: #fafaf9;
+  --border: #e7e5e4; --border-strong: #d6d3d1;
+  --ink: #0c0a09; --ink-2: #44403c; --ink-3: #78716c;
+  --accent: #0f172a; --accent-ink: #ffffff;
+  --success: #15803d; --success-bg: #dcfce7;
+  --danger: #b91c1c; --danger-bg: #fee2e2;
+  --warning: #b45309; --warning-bg: #fef3c7;
+  --info: #1e40af; --info-bg: #dbeafe;
+  --highlight: #f59e0b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overscroll-behavior: none; }
+body {
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg); color: var(--ink); font-size: 16px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh;
+}
+.topbar {
+  background: var(--accent); color: var(--accent-ink); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.08); position: sticky; top: 0; z-index: 100;
+}
+.topbar-title { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+.topbar-mark { width: 8px; height: 8px; background: var(--highlight); border-radius: 1px; }
+.topbar-user { font-size: 12px; font-family: 'Geist Mono', monospace; opacity: 0.75; }
+.main { flex: 1; padding: 16px; padding-bottom: 80px; }
+.screen-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+.screen-sub { font-size: 13px; color: var(--ink-3); margin-bottom: 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+.card-title { font-size: 12px; font-weight: 500; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 16px; border: 1px solid var(--border-strong); border-radius: 10px;
+  background: var(--surface); color: var(--ink); font-family: inherit;
+  font-size: 15px; font-weight: 500; cursor: pointer; width: 100%;
+  text-align: center; transition: transform 0.05s, background 0.1s;
+}
+.btn:active { transform: scale(0.99); background: var(--surface-2); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn-primary:active { background: #1e293b; }
+.btn-success { background: var(--success); color: white; border-color: var(--success); }
+.btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--ink-3); }
+.btn-big { padding: 22px 16px; font-size: 17px; font-weight: 600; }
+
+/* HUGE SCAN BUTTON — main interaction */
+.scan-cta {
+  width: 100%;
+  padding: 36px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.05s;
+  margin-bottom: 16px;
+}
+.scan-cta:active { transform: scale(0.99); background: #1e293b; }
+.scan-cta-icon {
+  width: 60px; height: 60px;
+  background: var(--highlight); color: #0c0a09;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 700;
+}
+.scan-cta-hint { font-size: 13px; opacity: 0.75; font-weight: 400; }
+
+/* Active context cards (showing what's currently held) */
+.context-card {
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.context-card-label {
+  font-size: 11px; font-weight: 500; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.context-card-main {
+  font-size: 22px; font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+  margin-bottom: 4px;
+}
+.context-card-meta {
+  font-size: 13px; color: var(--ink-2);
+}
+.context-card-clear {
+  font-size: 12px; color: var(--danger);
+  background: transparent; border: none; padding: 4px 0;
+  cursor: pointer; font-family: inherit;
+}
+
+.pin-display {
+  font-family: 'Geist Mono', monospace; font-size: 32px; font-weight: 600;
+  letter-spacing: 0.4em; text-align: center; padding: 24px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: 16px; min-height: 80px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pin-display.empty { color: var(--ink-3); letter-spacing: 0.2em; font-size: 14px; font-weight: 400; }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pin-key {
+  padding: 22px 0; font-size: 22px; font-weight: 500;
+  font-family: 'Geist Mono', monospace; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px; cursor: pointer;
+  transition: transform 0.05s;
+}
+.pin-key:active { transform: scale(0.96); background: var(--surface-2); }
+.pin-key.action { font-family: 'Geist', sans-serif; font-size: 14px; color: var(--ink-3); }
+
+.list { display: flex; flex-direction: column; gap: 8px; }
+.list-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: transform 0.05s;
+  text-align: left; width: 100%; font-family: inherit;
+}
+.list-item:active { transform: scale(0.99); background: var(--surface-2); }
+.list-item-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--accent); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; flex-shrink: 0;
+}
+.list-item-content { flex: 1; min-width: 0; }
+.list-item-title { font-size: 15px; font-weight: 500; }
+.list-item-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+/* SCANNER */
+.scanner-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #000; z-index: 1000; display: flex; flex-direction: column;
+}
+.scanner-header {
+  background: rgba(0,0,0,0.85); color: white; padding: 14px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  position: relative; z-index: 2; gap: 12px;
+}
+.scanner-title { font-size: 14px; font-weight: 500; flex: 1; min-width: 0; }
+.scanner-close {
+  background: rgba(255,255,255,0.18); color: white; border: none;
+  border-radius: 50%; width: 40px; height: 40px; font-size: 24px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; line-height: 1; padding: 0;
+}
+.scanner-close:active { background: rgba(255,255,255,0.3); }
+.scanner-view { flex: 1; position: relative; overflow: hidden; background: #111; }
+#qr-reader { width: 100%; height: 100%; }
+#qr-reader video { object-fit: cover; }
+.scanner-frame {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 240px; height: 240px;
+  border: 2px solid rgba(255,255,255,0.6); border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); pointer-events: none;
+}
+.scanner-frame::before, .scanner-frame::after,
+.scanner-frame > span:nth-child(1), .scanner-frame > span:nth-child(2) {
+  content: ''; position: absolute; width: 24px; height: 24px;
+  border: 3px solid var(--highlight);
+}
+.scanner-frame::before { top: -2px; left: -2px; border-right: none; border-bottom: none; border-top-left-radius: 12px; }
+.scanner-frame::after { top: -2px; right: -2px; border-left: none; border-bottom: none; border-top-right-radius: 12px; }
+.scanner-frame > span:nth-child(1) { bottom: -2px; left: -2px; border-right: none; border-top: none; border-bottom-left-radius: 12px; }
+.scanner-frame > span:nth-child(2) { bottom: -2px; right: -2px; border-left: none; border-top: none; border-bottom-right-radius: 12px; }
+.scanner-hint {
+  position: absolute; top: calc(50% + 140px); left: 50%; transform: translateX(-50%);
+  color: white; font-size: 14px; text-align: center;
+  width: 100%; padding: 0 24px; text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+.scanner-no-camera {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: white; text-align: center; padding: 24px; font-size: 14px;
+}
+.scanner-no-camera-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.6; }
+.scanner-manual {
+  background: rgba(0,0,0,0.9); padding: 14px 16px;
+  display: flex; gap: 8px; flex-shrink: 0;
+}
+.scanner-manual input {
+  flex: 1; padding: 14px; border: 1px solid #333;
+  background: #1c1917; color: white; border-radius: 8px;
+  font-size: 16px; font-family: 'Geist Mono', monospace;
+}
+.scanner-manual button {
+  padding: 0 18px; background: var(--highlight); color: #0c0a09;
+  border: none; border-radius: 8px; font-weight: 600; font-size: 14px;
+  cursor: pointer; font-family: inherit;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;
+  font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.badge-neutral { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--border); }
+
+.toast {
+  position: fixed; bottom: 24px; left: 16px; right: 16px;
+  padding: 14px 18px; border-radius: 10px; font-size: 14px; font-weight: 500;
+  z-index: 2000; display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  transform: translateY(100px); opacity: 0;
+  transition: transform 0.25s, opacity 0.25s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-success { background: var(--success); color: white; }
+.toast-danger { background: var(--danger); color: white; }
+.toast-info { background: var(--accent); color: white; }
+.toast-warning { background: var(--warning); color: white; }
+
+.item-list { display: flex; flex-direction: column; gap: 8px; }
+.item-chip {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.item-chip-code { font-family: 'Geist Mono', monospace; font-weight: 600; font-size: 13px; }
+.item-chip-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
+.summary-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; background: var(--surface-2); border-radius: 8px;
+  font-size: 14px; margin-bottom: 6px;
+}
+.summary-row-label { color: var(--ink-3); }
+.summary-row-value { font-weight: 600; font-family: 'Geist Mono', monospace; }
+.divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 18px 0 12px;
+  font-size: 11px; color: var(--ink-3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+.qr-tile {
+  background: white; border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 8px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.qr-tile-img { width: 100%; max-width: 120px; }
+.qr-tile-img canvas, .qr-tile-img img { width: 100%; height: auto; display: block; }
+.qr-tile-label { font-family: 'Geist Mono', monospace; font-size: 11px; font-weight: 600; }
+.qr-tile-sub { font-size: 10px; color: var(--ink-3); }
+.tabs {
+  display: flex; gap: 4px; background: var(--surface-2);
+  padding: 4px; border-radius: 10px; margin-bottom: 16px;
+}
+.tab {
+  flex: 1; padding: 10px; background: transparent; border: none;
+  border-radius: 7px; font-family: inherit; font-size: 13px; font-weight: 500;
+  color: var(--ink-3); cursor: pointer;
+}
+.tab.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.admin-link {
+  position: fixed; bottom: 14px; right: 14px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(0,0,0,0.05); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--ink-3); font-size: 18px; z-index: 50;
+}
+.admin-link:active { background: rgba(0,0,0,0.1); }
+.alarm-card { background: var(--danger-bg); border: 2px solid var(--danger); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+.alarm-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--danger); margin-bottom: 8px; }
+.alarm-icon { font-size: 22px; }
+.alarm-text { font-size: 14px; color: #7f1d1d; line-height: 1.5; }
+.last-action {
+  background: var(--success-bg); border: 1px solid #86efac;
+  color: var(--success); border-radius: 8px; padding: 10px 12px;
+  font-size: 13px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.last-action-icon { font-size: 16px; }
+body.scanner-open { overflow: hidden; }
+@media print {
+  .topbar, .btn, .admin-link { display: none !important; }
+  body { background: white; }
+  .qr-tile { break-inside: avoid; border: 1px solid #000; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const STORE = {
+  KEY: 'gc_carttrack_v4',
+  load() { try { const r = localStorage.getItem(this.KEY); return r ? JSON.parse(r) : this.empty(); } catch (e) { return this.empty(); } },
+  save(d) { try { localStorage.setItem(this.KEY, JSON.stringify(d)); } catch (e) {} },
+  empty() { return { operators: [], carts: [], machines: [], trucks: [], actions: [], jobs: [], transfers: [], events: [], activeOperator: null, lastAction: null, holdingCart: null }; },
+  reset() { localStorage.removeItem(this.KEY); }
+};
+let state = STORE.load();
+function persist() { STORE.save(state); }
+
+function seedDemoData() {
+  state = {
+    operators: [
+      { id: 'OP-001', name: 'Mehmet Y.', role: 'operator', pin: '1234' },
+      { id: 'OP-002', name: 'Ali K.', role: 'operator', pin: '2345' },
+      { id: 'OP-003', name: 'Hasan T.', role: 'supervisor', pin: '9999' },
+    ],
+    carts: [
+      { id: 'CART-0034', qr: 'CART-0034', status: 'BOS', location_type: null, location_id: null, current_jobs: [] },
+      { id: 'CART-0035', qr: 'CART-0035', status: 'BOS', location_type: null, location_id: null, current_jobs: [] },
+      { id: 'CART-0036', qr: 'CART-0036', status: 'BOS', location_type: null, location_id: null, current_jobs: [] },
+      { id: 'CART-0037', qr: 'CART-0037', status: 'BOS', location_type: null, location_id: null, current_jobs: [] },
+      { id: 'CART-0038', qr: 'CART-0038', status: 'BOS', location_type: null, location_id: null, current_jobs: [] },
+    ],
+    machines: [
+      { id: 'T05', qr: 'MAC-T05', type: 'DOKUMA', name: 'Dokuma T05' },
+      { id: 'CITI-1', qr: 'MAC-CITI-1', type: 'CITI', name: 'Çiti 1' },
+      { id: 'LARK-1', qr: 'MAC-LARK-1', type: 'LARK', name: 'Lark/Tutkal 1' },
+      { id: 'ETIKET-1', qr: 'MAC-ETIKET-1', type: 'ETIKET', name: 'Etiket (Müşteri)' },
+      { id: 'OYMA-1', qr: 'MAC-OYMA-1', type: 'OYMA', name: 'Oyma' },
+      { id: 'KONF-1', qr: 'MAC-KONF-1', type: 'KONFEKSIYON', name: 'Konfeksiyon' },
+      { id: 'OTOMASYON-1', qr: 'MAC-OTOMASYON-1', type: 'OTOMASYON', name: 'Otomasyon' },
+    ],
+    trucks: [
+      { id: 'TRUCK-027', qr: 'TRK-27ABC123', plate: '27 ABC 123' },
+    ],
+    // Special action QR codes (not machines, not trucks — system actions)
+    actions: [
+      { id: 'PKG-COMPLETE', qr: 'ACT-PKG-COMPLETE', type: 'PACKAGE_COMPLETE', name: 'Paketlemeye Geçti', desc: 'Otomasyon sonrası araba boşaltıldı, paketlemeye gitti' },
+    ],
+    jobs: [
+      { code: 'T05_373170', design: 'OB27', size: '400x480', customer: 'Müşteri A', status: 'YOK', current_cart: null },
+      { code: 'T05_373171', design: 'OB27', size: '200x290', customer: 'Müşteri A', status: 'YOK', current_cart: null },
+      { code: 'T05_373172', design: 'OB45', size: '160x230', customer: 'Müşteri B', status: 'YOK', current_cart: null },
+      { code: 'T05_373173', design: 'OB45', size: '120x180', customer: 'Müşteri B', status: 'YOK', current_cart: null },
+      { code: 'T05_373174', design: 'OB31', size: '80x150', customer: 'Müşteri C', status: 'YOK', current_cart: null },
+    ],
+    transfers: [], events: [],
+    activeOperator: null,
+    lastAction: null,
+    holdingCart: null,  // current cart context (last cart scanned)
+  };
+  persist();
+}
+
+function uid() { return 'EV-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); }
+function fmtDate(ts) {
+  const d = new Date(ts); const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function recordEvent(type, data) {
+  const ev = { id: uid(), type, operator_id: state.activeOperator?.id || null, operator_name: state.activeOperator?.name || null, timestamp: Date.now(), ...data };
+  state.events.unshift(ev);
+  if (state.events.length > 1000) state.events = state.events.slice(0, 1000);
+  persist();
+  return ev;
+}
+
+// QR parser — recognizes: cart, machine, truck, hali barcode
+function parseQR(text) {
+  const t = text.trim().toUpperCase();
+  if (t.startsWith('CART-')) {
+    const cart = state.carts.find(c => c.qr.toUpperCase() === t || c.id.toUpperCase() === t);
+    return cart ? { kind: 'cart', entity: cart } : { kind: 'cart', unknown: true, raw: text };
+  }
+  if (t.startsWith('MAC-')) {
+    const m = state.machines.find(x => x.qr.toUpperCase() === t);
+    return m ? { kind: 'machine', entity: m } : { kind: 'machine', unknown: true, raw: text };
+  }
+  if (t.startsWith('TRK-')) {
+    const tr = state.trucks.find(x => x.qr.toUpperCase() === t);
+    return tr ? { kind: 'truck', entity: tr } : { kind: 'truck', unknown: true, raw: text };
+  }
+  if (t.startsWith('ACT-')) {
+    const a = (state.actions || []).find(x => x.qr.toUpperCase() === t);
+    return a ? { kind: 'action', entity: a } : { kind: 'action', unknown: true, raw: text };
+  }
+  // Hali barcode: T## then digits, optionally with underscore between
+  if (/^T\d{2}[_ ]?\d+$/i.test(t)) {
+    let normalized = t.replace(/\s/g, '_');
+    if (!normalized.includes('_')) normalized = normalized.replace(/^(T\d{2})(\d+)$/, '$1_$2');
+    let job = state.jobs.find(j => j.code.toUpperCase() === normalized);
+    if (!job) {
+      job = { code: normalized, design: '?', size: '?', customer: '?', status: 'YOK', current_cart: null, auto_created: true };
+      state.jobs.push(job); persist();
+    }
+    return { kind: 'job', entity: job };
+  }
+  return { kind: 'unknown', raw: text };
+}
+
+const $ = (sel) => document.querySelector(sel);
+const app = $('#app');
+
+function el(tag, props, ...children) {
+  if (props == null) props = {};
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const c of children.flat()) {
+    if (c == null || c === false) continue;
+    if (typeof c === 'string' || typeof c === 'number') e.appendChild(document.createTextNode(String(c)));
+    else e.appendChild(c);
+  }
+  return e;
+}
+
+function toast(msg, kind = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = el('div', { class: `toast toast-${kind}` }, msg);
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 250); }, 2400);
+}
+function vibrate(ok = true) { if (navigator.vibrate) navigator.vibrate(ok ? 50 : [60, 40, 60]); }
+
+let activeScanner = null;
+
+function openScanner({ title = 'QR okutun', onDetect }) {
+  document.body.classList.add('scanner-open');
+  const overlay = el('div', { class: 'scanner-overlay' });
+
+  const close = () => {
+    if (activeScanner) {
+      try {
+        const s = activeScanner; activeScanner = null;
+        s.stop().then(() => { try { s.clear(); } catch(e){} }).catch(() => {});
+      } catch (e) {}
+    }
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    document.body.classList.remove('scanner-open');
+  };
+
+  const closeBtn = el('button', { class: 'scanner-close', type: 'button', 'aria-label': 'Kapat' }, '×');
+  const closeHandler = (e) => { if (e) { e.preventDefault(); e.stopPropagation(); } close(); };
+  closeBtn.addEventListener('click', closeHandler);
+  closeBtn.addEventListener('touchstart', closeHandler, { passive: false });
+
+  const header = el('div', { class: 'scanner-header' },
+    el('div', { class: 'scanner-title' }, title),
+    closeBtn
+  );
+
+  const view = el('div', { class: 'scanner-view' },
+    el('div', { id: 'qr-reader' }),
+    el('div', { class: 'scanner-frame' }, el('span'), el('span')),
+    el('div', { class: 'scanner-hint' }, 'QR\'ı çerçeveye getirin')
+  );
+
+  const manualInput = el('input', { type: 'text', placeholder: 'veya elle yazın', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false' });
+  const manualSubmit = () => {
+    const v = manualInput.value.trim();
+    if (v) { onDetect(v); close(); }
+  };
+  const manualBtn = el('button', { type: 'button' }, 'Onayla');
+  manualBtn.addEventListener('click', manualSubmit);
+  manualInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') manualSubmit(); });
+  const manual = el('div', { class: 'scanner-manual' }, manualInput, manualBtn);
+
+  overlay.appendChild(header);
+  overlay.appendChild(view);
+  overlay.appendChild(manual);
+  document.body.appendChild(overlay);
+
+  const escHandler = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+
+  try {
+    if (typeof Html5Qrcode === 'undefined') throw new Error('library not loaded');
+    activeScanner = new Html5Qrcode('qr-reader');
+    // Support both QR and 1D barcodes (Code 128 used by hali labels)
+    const formats = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+    ] : undefined;
+    activeScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0, formatsToSupport: formats },
+      (decodedText) => { vibrate(true); onDetect(decodedText); close(); },
+      () => {}
+    ).catch(err => {
+      console.warn('Camera failed:', err);
+      activeScanner = null;
+      showNoCameraMessage(view);
+      manualInput.focus();
+    });
+  } catch (e) {
+    console.warn('Scanner init failed:', e);
+    activeScanner = null;
+    showNoCameraMessage(view);
+    manualInput.focus();
+  }
+}
+
+function showNoCameraMessage(view) {
+  const frame = view.querySelector('.scanner-frame');
+  const hint = view.querySelector('.scanner-hint');
+  if (frame) frame.remove();
+  if (hint) hint.remove();
+  view.appendChild(el('div', { class: 'scanner-no-camera' },
+    el('div', { class: 'scanner-no-camera-icon' }, '◌'),
+    el('div', null, 'Kamera kullanılamıyor'),
+    el('div', { style: 'font-size:12px; opacity:0.6; margin-top:6px' }, 'Aşağıdan elle girin veya × ile kapatın')
+  ));
+}
+
+let view = null;
+let viewData = null;
+function go(v, data = null) { view = v; viewData = data; render(); }
+
+// ============================================================================
+// CORE LOGIC: Two-tap flow (cart -> something)
+// ============================================================================
+
+// When operator scans a QR, this is the universal handler
+function handleScan(text) {
+  const p = parseQR(text);
+
+  // Unknown QR
+  if (p.kind === 'unknown' || p.unknown) {
+    toast(`Bilinmeyen QR: ${text}`, 'danger');
+    vibrate(false);
+    return;
+  }
+
+  // CART scan
+  if (p.kind === 'cart') {
+    state.holdingCart = p.entity.id;
+    state.lastAction = `Araba alındı: ${p.entity.id}`;
+    persist();
+    toast(`${p.entity.id} seçildi — şimdi makine, halı veya kamyon okutun`, 'info');
+    render();
+    return;
+  }
+
+  // MACHINE scan — needs holding cart
+  if (p.kind === 'machine') {
+    if (!state.holdingCart) {
+      toast('Önce arabanın plakasını okutun', 'danger');
+      vibrate(false);
+      return;
+    }
+    handleCartToMachine(state.holdingCart, p.entity);
+    return;
+  }
+
+  // TRUCK scan — needs holding cart
+  if (p.kind === 'truck') {
+    if (!state.holdingCart) {
+      toast('Önce arabanın plakasını okutun', 'danger');
+      vibrate(false);
+      return;
+    }
+    handleCartToTruck(state.holdingCart, p.entity);
+    return;
+  }
+
+  // HALI BARCODE scan — needs holding cart
+  if (p.kind === 'job') {
+    if (!state.holdingCart) {
+      toast('Önce arabanın plakasını okutun', 'danger');
+      vibrate(false);
+      return;
+    }
+    handleHaliToCart(state.holdingCart, p.entity);
+    return;
+  }
+
+  // ACTION scan — needs holding cart
+  if (p.kind === 'action') {
+    if (p.unknown) {
+      toast(`Bilinmeyen aksiyon QR'ı: ${text}`, 'danger');
+      vibrate(false);
+      return;
+    }
+    if (!state.holdingCart) {
+      toast('Önce arabanın plakasını okutun', 'danger');
+      vibrate(false);
+      return;
+    }
+    handleAction(state.holdingCart, p.entity);
+    return;
+  }
+}
+
+function handleCartToMachine(cartId, machine) {
+  const cart = state.carts.find(c => c.id === cartId);
+
+  // For LARK or CITI: cart should have content
+  if (machine.type === 'LARK' || machine.type === 'CITI') {
+    if (cart.current_jobs.length === 0) {
+      toast(`${cart.id} boş — ${machine.name}'ye gönderilemez`, 'danger');
+      vibrate(false);
+      return;
+    }
+  }
+
+  cart.location_type = 'MACHINE';
+  cart.location_id = machine.id;
+  cart.status = cart.current_jobs.length > 0 ? 'AKTIF' : 'BOS';
+
+  // Update job statuses based on machine type
+  const jobStatus = machine.type === 'DOKUMA' ? 'MAKINEDE' :
+                    machine.type === 'CITI' ? 'CITIDE' :
+                    machine.type === 'LARK' ? 'LARKTA' :
+                    machine.type === 'ETIKET' ? 'ETIKETTE' :
+                    machine.type === 'OYMA' ? 'OYMADA' :
+                    machine.type === 'KONFEKSIYON' ? 'KONFEKSIYONDA' :
+                    machine.type === 'OTOMASYON' ? 'OTOMASYONDA' :
+                    'TASINIYOR';
+  for (const jc of cart.current_jobs) {
+    const j = state.jobs.find(x => x.code === jc);
+    if (j) j.status = jobStatus;
+  }
+
+  recordEvent('CART_TO_MACHINE', {
+    cart_id: cart.id, machine_id: machine.id, machine_type: machine.type,
+    jobs: cart.current_jobs,
+  });
+
+  state.lastAction = `${cart.id} → ${machine.name}`;
+  state.holdingCart = null;  // release cart
+  persist();
+  toast(state.lastAction, 'success');
+  render();
+}
+
+function handleCartToTruck(cartId, truck) {
+  const cart = state.carts.find(c => c.id === cartId);
+
+  if (cart.current_jobs.length === 0) {
+    toast(`${cart.id} boş — kamyona koymanın anlamı yok`, 'danger');
+    vibrate(false);
+    return;
+  }
+
+  // Find or create active transfer for this truck
+  let transfer = state.transfers.find(t => t.truck_id === truck.id && t.status === 'IN_TRANSIT');
+
+  if (!transfer) {
+    // Create new transfer
+    transfer = {
+      id: 'TR-' + Date.now(),
+      truck_id: truck.id, truck_plate: truck.plate,
+      carts: [], received_carts: [], missing_carts: [],
+      loaded_at: Date.now(), received_at: null,
+      status: 'IN_TRANSIT',
+    };
+    state.transfers.unshift(transfer);
+  }
+
+  // Check: is this an UNLOAD scenario?
+  // (cart was previously loaded onto this truck and is now being unloaded)
+  const wasOnTruck = cart.location_type === 'TRUCK' && cart.location_id === truck.id;
+
+  if (wasOnTruck) {
+    // UNLOAD
+    cart.status = 'AKTIF';
+    cart.location_type = null;
+    cart.location_id = null;
+    cart.current_transfer = null;
+    transfer.received_carts.push(cart.id);
+    for (const jc of cart.current_jobs) {
+      const j = state.jobs.find(x => x.code === jc);
+      if (j) j.status = 'TESLIM_ALINDI';
+    }
+    recordEvent('CART_FROM_TRUCK', { cart_id: cart.id, truck_id: truck.id, transfer_id: transfer.id });
+    state.lastAction = `${cart.id} kamyondan indi (${truck.plate})`;
+
+    // Check if transfer complete
+    const remaining = transfer.carts.filter(c => !transfer.received_carts.includes(c));
+    if (remaining.length === 0 && transfer.carts.length > 0) {
+      transfer.status = 'RECEIVED';
+      transfer.received_at = Date.now();
+      recordEvent('TRUCK_RECEIVE_COMPLETE', { transfer_id: transfer.id });
+      toast(`${truck.plate} tüm arabalar teslim alındı`, 'success');
+    }
+  } else {
+    // LOAD onto truck
+    if (!transfer.carts.includes(cart.id)) transfer.carts.push(cart.id);
+    cart.status = 'TRANSFERDE';
+    cart.location_type = 'TRUCK';
+    cart.location_id = truck.id;
+    cart.current_transfer = transfer.id;
+    for (const jc of cart.current_jobs) {
+      const j = state.jobs.find(x => x.code === jc);
+      if (j) j.status = 'KAMYONDA';
+    }
+    recordEvent('CART_TO_TRUCK', { cart_id: cart.id, truck_id: truck.id, transfer_id: transfer.id });
+    state.lastAction = `${cart.id} → ${truck.plate}`;
+  }
+
+  state.holdingCart = null;
+  persist();
+  toast(state.lastAction, 'success');
+  render();
+}
+
+function handleHaliToCart(cartId, job) {
+  const cart = state.carts.find(c => c.id === cartId);
+
+  // Already in this cart?
+  if (job.current_cart === cart.id) {
+    toast(`${job.code} zaten bu arabada`, 'warning');
+    return;
+  }
+
+  // In another cart? Move it
+  if (job.current_cart && job.current_cart !== cart.id) {
+    const oldCart = state.carts.find(c => c.id === job.current_cart);
+    if (oldCart) {
+      oldCart.current_jobs = oldCart.current_jobs.filter(jc => jc !== job.code);
+      if (oldCart.current_jobs.length === 0) {
+        oldCart.status = 'BOS';
+        oldCart.location_type = null;
+        oldCart.location_id = null;
+      }
+    }
+  }
+
+  // Add to current cart
+  if (!cart.current_jobs.includes(job.code)) cart.current_jobs.push(job.code);
+  job.current_cart = cart.id;
+  job.status = 'ARABADA';
+  cart.status = 'AKTIF';
+
+  recordEvent('HALI_TO_CART', {
+    cart_id: cart.id, job_code: job.code,
+    cart_machine: cart.location_id || null,
+  });
+
+  state.lastAction = `${job.code} → ${cart.id}`;
+  // KEEP holdingCart so worker can scan more halis without re-scanning the cart
+  persist();
+  toast(state.lastAction, 'success');
+  render();
+}
+
+// Special action — currently: PACKAGE_COMPLETE
+// Triggered after Otomasyon finishes; cart is emptied, halis go to "TAMAMLANDI",
+// cart returns to BOS state ready for next cycle
+function handleAction(cartId, action) {
+  const cart = state.carts.find(c => c.id === cartId);
+
+  if (action.type === 'PACKAGE_COMPLETE') {
+    if (cart.current_jobs.length === 0) {
+      toast(`${cart.id} zaten boş`, 'warning');
+      return;
+    }
+    // Mark all halis as TAMAMLANDI (completed, sent to packaging)
+    const completedJobs = [...cart.current_jobs];
+    for (const jc of completedJobs) {
+      const j = state.jobs.find(x => x.code === jc);
+      if (j) {
+        j.status = 'TAMAMLANDI';
+        j.current_cart = null;
+        j.completed_at = Date.now();
+      }
+    }
+    // Empty the cart
+    cart.current_jobs = [];
+    cart.status = 'BOS';
+    cart.location_type = null;
+    cart.location_id = null;
+
+    recordEvent('PACKAGE_COMPLETE', {
+      cart_id: cart.id,
+      jobs: completedJobs,
+    });
+
+    state.lastAction = `${cart.id} boşaltıldı, ${completedJobs.length} halı paketlemeye geçti`;
+    state.holdingCart = null;
+    persist();
+    toast(state.lastAction, 'success');
+    render();
+    return;
+  }
+
+  toast(`Bilinmeyen aksiyon: ${action.type}`, 'danger');
+}
+
+// ============================================================================
+// VIEWS
+// ============================================================================
+
+function render() {
+  app.innerHTML = '';
+  if (!state.operators.length) { renderFirstRun(); return; }
+  if (!state.activeOperator) { renderLogin(); return; }
+  if (view === 'admin')    { renderAdmin();   return; }
+  if (view === 'qr_print') { renderQRPrint(); return; }
+  if (view === 'events')   { renderEvents();  return; }
+  if (view === 'status')   { renderStatus();  return; }
+  renderMain();
+}
+
+function renderFirstRun() {
+  app.appendChild(el('div', { class: 'topbar' },
+    el('div', { class: 'topbar-title' }, el('span', { class: 'topbar-mark' }), 'Grand Carpet'),
+    el('span', { class: 'topbar-user' }, 'Pilot Demo')
+  ));
+  app.appendChild(el('div', { class: 'main' },
+    el('h1', { class: 'screen-title' }, 'Pilot Demoya Hoş Geldin'),
+    el('p', { class: 'screen-sub' }, 'Test verisi: 3 makine, 5 araba, 1 kamyon, 5 örnek halı barkodu.'),
+    el('button', { class: 'btn btn-primary btn-big', onclick: () => {
+      seedDemoData(); toast('Demo verisi yüklendi', 'success'); render();
+    }}, 'Demo verisini yükle'),
+  ));
+}
+
+function renderLogin() {
+  let pin = '';
+  let selected = null;
+
+  const refresh = () => {
+    inner.innerHTML = '';
+    inner.appendChild(el('h1', { class: 'screen-title' }, selected ? selected.name : 'Operatör seçin'));
+    inner.appendChild(el('p', { class: 'screen-sub' }, selected ? '4 haneli PIN' : 'Telefonu kim kullanıyor?'));
+
+    if (!selected) {
+      const list = el('div', { class: 'list' });
+      for (const op of state.operators) {
+        const initials = op.name.split(' ').map(s => s[0]).join('');
+        list.appendChild(el('button', { class: 'list-item', type: 'button',
+          onclick: () => { selected = op; pin = ''; refresh(); }},
+          el('div', { class: 'list-item-icon' }, initials),
+          el('div', { class: 'list-item-content' },
+            el('div', { class: 'list-item-title' }, op.name),
+            el('div', { class: 'list-item-sub' }, op.role === 'supervisor' ? 'Vardiya Şefi' : 'Operatör')
+          )
+        ));
+      }
+      inner.appendChild(list);
+    } else {
+      inner.appendChild(el('div', { class: pin ? 'pin-display' : 'pin-display empty' }, pin ? '•'.repeat(pin.length) : 'PIN giriniz'));
+      const pad = el('div', { class: 'pin-pad' });
+      const press = (k) => {
+        if (k === 'CLR') { pin = ''; refresh(); return; }
+        if (k === 'BACK') { pin = pin.slice(0, -1); refresh(); return; }
+        if (pin.length >= 4) return;
+        pin += k;
+        if (pin.length === 4) {
+          if (pin === selected.pin) {
+            state.activeOperator = selected; persist();
+            recordEvent('LOGIN', { user: selected.id });
+            toast(`Hoş geldin ${selected.name}`, 'success');
+            render();
+          } else { vibrate(false); toast('PIN hatalı', 'danger'); pin = ''; refresh(); }
+        } else refresh();
+      };
+      for (const k of ['1','2','3','4','5','6','7','8','9']) {
+        pad.appendChild(el('button', { class: 'pin-key', type: 'button', onclick: () => press(k) }, k));
+      }
+      pad.appendChild(el('button', { class: 'pin-key action', type: 'button', onclick: () => press('CLR') }, 'Temizle'));
+      pad.appendChild(el('button', { class: 'pin-key', type: 'button', onclick: () => press('0') }, '0'));
+      pad.appendChild(el('button', { class: 'pin-key action', type: 'button', onclick: () => press('BACK') }, '← Sil'));
+      inner.appendChild(pad);
+      inner.appendChild(el('button', { class: 'btn btn-ghost', style: 'margin-top:16px',
+        onclick: () => { selected = null; pin = ''; refresh(); }}, 'Geri'));
+    }
+  };
+
+  app.appendChild(el('div', { class: 'topbar' },
+    el('div', { class: 'topbar-title' }, el('span', { class: 'topbar-mark' }), 'Giriş'),
+    el('span', { class: 'topbar-user' }, 'Pilot')
+  ));
+  const inner = el('div', { class: 'main' });
+  app.appendChild(inner);
+  refresh();
+}
+
+// MAIN — single screen, single big scan button
+function renderMain() {
+  app.appendChild(el('div', { class: 'topbar' },
+    el('div', { class: 'topbar-title' }, el('span', { class: 'topbar-mark' }), 'QR Okut'),
+    el('span', { class: 'topbar-user' }, state.activeOperator.name)
+  ));
+
+  const main = el('div', { class: 'main' });
+
+  // Last successful action banner
+  if (state.lastAction) {
+    main.appendChild(el('div', { class: 'last-action' },
+      el('span', { class: 'last-action-icon' }, '✓'),
+      el('span', null, state.lastAction)
+    ));
+  }
+
+  // Holding cart context
+  const cart = state.holdingCart ? state.carts.find(c => c.id === state.holdingCart) : null;
+  if (cart) {
+    main.appendChild(el('div', { class: 'context-card' },
+      el('div', { class: 'context-card-label' }, 'Elindeki araba'),
+      el('div', { class: 'context-card-main' }, cart.id),
+      el('div', { class: 'context-card-meta' },
+        cart.current_jobs.length === 0
+          ? 'BOŞ — şimdi halı barkodu veya makine okutabilirsin'
+          : `${cart.current_jobs.length} halı içinde — makine, kamyon, halı veya paketleme QR\'ı okut`
+      ),
+      el('button', { class: 'context-card-clear', type: 'button',
+        onclick: () => { state.holdingCart = null; persist(); render(); }},
+        '× arabayı bırak'
+      )
+    ));
+  }
+
+  // BIG SCAN BUTTON
+  const cta = el('button', { class: 'scan-cta', type: 'button',
+    onclick: () => openScanner({ title: cart ? 'Sıradaki QR' : 'Araba plakası', onDetect: handleScan })
+  },
+    el('div', { class: 'scan-cta-icon' }, '⌒'),
+    el('div', null, 'QR OKUT'),
+    el('div', { class: 'scan-cta-hint' },
+      cart
+        ? 'Halı • Makine • Kamyon • Paketleme'
+        : 'Önce araba plakasını okut'
+    )
+  );
+  main.appendChild(cta);
+
+  // Hali list (when cart is held)
+  if (cart && cart.current_jobs.length > 0) {
+    main.appendChild(el('div', { class: 'card' },
+      el('div', { class: 'card-title' }, 'Bu arabadaki halılar'),
+      el('div', { class: 'item-list' },
+        ...cart.current_jobs.map(jc => {
+          const j = state.jobs.find(x => x.code === jc);
+          return el('div', { class: 'item-chip' },
+            el('div', null,
+              el('div', { class: 'item-chip-code' }, jc),
+              j ? el('div', { class: 'item-chip-meta' }, `${j.design} · ${j.size} · ${j.customer}`) : null
+            )
+          );
+        })
+      )
+    ));
+  }
+
+  // Helper hint card if nothing held
+  if (!cart) {
+    main.appendChild(el('div', { class: 'card' },
+      el('div', { class: 'card-title' }, 'Nasıl çalışır'),
+      el('div', { style: 'font-size:13px; color:var(--ink-2); line-height:1.6' },
+        '1. Önce ARABANIN plakasını okut',
+        el('br'), '2. Sonra ne yapıyorsan onu okut:',
+        el('br'), '   • Halı barkodu → arabaya yüklendi',
+        el('br'), '   • Makine QR → arabayı o makineye götürdün',
+        el('br'), '   • Kamyon QR → arabayı kamyona yükledin/indirdin',
+        el('br'), '   • Paketleme QR → araba boşaldı, halılar paketlemeye geçti'
+      )
+    ));
+  }
+
+  app.appendChild(main);
+
+  // Floating supervisor admin
+  const adminBtn = el('div', { class: 'admin-link', title: 'Şef girişi' }, '⚙');
+  adminBtn.addEventListener('click', () => {
+    promptSupervisor((ok) => { if (ok) go('admin'); });
+  });
+  app.appendChild(adminBtn);
+}
+
+function promptSupervisor(callback) {
+  const supervisor = state.operators.find(o => o.role === 'supervisor');
+  if (!supervisor) { toast('Sistemde şef tanımlı değil', 'danger'); callback(false); return; }
+  // If current operator IS supervisor, just allow
+  if (state.activeOperator && state.activeOperator.role === 'supervisor') { callback(true); return; }
+  const enteredPin = window.prompt('Vardiya Şefi PIN:');
+  if (!enteredPin) { callback(false); return; }
+  if (enteredPin === supervisor.pin) callback(true);
+  else { toast('PIN hatalı', 'danger'); vibrate(false); callback(false); }
+}
+
+function renderAdmin() {
+  app.appendChild(el('div', { class: 'topbar' },
+    el('div', { class: 'topbar-title' }, el('span', { class: 'topbar-mark' }), 'Yönetim'),
+    el('span', { class: 'topbar-user' }, state.activeOperator?.name || '')
+  ));
+
+  const main = el('div', { class: 'main' });
+  main.appendChild(el('button', { class: 'btn btn-ghost', style: 'margin-bottom:12px', onclick: () => { view = null; render(); }}, '← Geri'));
+
+  main.appendChild(el('h1', { class: 'screen-title' }, 'Yönetim'));
+
+  const cartsActive = state.carts.filter(c => c.status === 'AKTIF').length;
+  const cartsTransit = state.carts.filter(c => c.status === 'TRANSFERDE').length;
+  const cartsLost = state.carts.filter(c => c.status === 'KAYIP').length;
+  const cartsEmpty = state.carts.filter(c => c.status === 'BOS').length;
+  const jobsCompleted = state.jobs.filter(j => j.status === 'TAMAMLANDI').length;
+  const jobsInProgress = state.jobs.filter(j => j.status !== 'TAMAMLANDI' && j.status !== 'YOK').length;
+
+  main.appendChild(el('div', { class: 'card' },
+    el('div', { class: 'card-title' }, 'Anlık Durum'),
+    el('div', { class: 'summary-row' }, el('span', { class: 'summary-row-label' }, 'Aktif arabalar'), el('span', { class: 'summary-row-value' }, cartsActive)),
+    el('div', { class: 'summary-row' }, el('span', { class: 'summary-row-label' }, 'Boş arabalar'), el('span', { class: 'summary-row-value' }, cartsEmpty)),
+    el('div', { class: 'summary-row' }, el('span', { class: 'summary-row-label' }, 'Yolda (kamyonda)'), el('span', { class: 'summary-row-value' }, cartsTransit)),
+    el('div', { class: 'summary-row' }, el('span', { class: 'summary-row-label' }, 'Kayıp arabalar'), el('span', { class: 'summary-row-value', style: cartsLost > 0 ? 'color:var(--danger)' : '' }, cartsLost)),
+    el('div', { class: 'summary-row' }, el('span', { class: 'summary-row-label' }, 'İşlenmekte olan halılar'), el('span', { class: 'summary-row-value' }, jobsInProgress)),
+    el('div', { class: 'summary-row' }, el('span', { class: 'summary-row-label' }, 'Tamamlanan halılar'), el('span', { class: 'summary-row-value', style: jobsCompleted > 0 ? 'color:var(--success)' : '' }, jobsCompleted)),
+    el('div', { class: 'summary-row' }, el('span', { class: 'summary-row-label' }, 'Olay sayısı'), el('span', { class: 'summary-row-value' }, state.events.length)),
+  ));
+
+  main.appendChild(el('div', { class: 'divider' }, 'Görüntüle'));
+  main.appendChild(el('button', { class: 'btn', onclick: () => go('status') }, 'Durum sorgu (araba/halı/makine)'));
+  main.appendChild(el('button', { class: 'btn', style: 'margin-top:8px', onclick: () => go('events') }, 'Olay geçmişi'));
+  main.appendChild(el('button', { class: 'btn', style: 'margin-top:8px', onclick: () => go('qr_print') }, 'QR plakaları'));
+
+  main.appendChild(el('div', { class: 'divider' }, 'Bağlantı'));
+  main.appendChild(el('button', { class: 'btn', onclick: () => {
+    state.activeOperator = null; state.holdingCart = null; persist(); view = null; render();
+  }}, 'Operatör çıkışı'));
+
+  main.appendChild(el('div', { class: 'divider' }, 'Sıfırlama'));
+  main.appendChild(el('button', { class: 'btn', onclick: () => {
+    if (!confirm('Tüm olay geçmişi silinsin?')) return;
+    state.events = []; persist(); toast('Olay geçmişi silindi', 'success'); render();
+  }}, 'Olay geçmişini sil'));
+  main.appendChild(el('button', { class: 'btn', style: 'margin-top:8px', onclick: () => {
+    if (!confirm('Demo verisi yenilensin? (her şey silinir)')) return;
+    seedDemoData(); state.activeOperator = null; view = null; render();
+    toast('Demo verisi yenilendi', 'success');
+  }}, 'Demo verisini yenile'));
+  main.appendChild(el('button', { class: 'btn btn-danger', style: 'margin-top:8px', onclick: () => {
+    if (!confirm('TÜM veriler silinsin? (Geri alınamaz)')) return;
+    STORE.reset(); state = STORE.empty(); view = null; render();
+  }}, 'Sistemi sıfırla'));
+
+  app.appendChild(main);
+}
+
+function renderStatus() {
+  app.appendChild(el('div', { class: 'topbar' },
+    el('div', { class: 'topbar-title' }, el('span', { class: 'topbar-mark' }), 'Durum'),
+    el('span', { class: 'topbar-user' }, state.activeOperator.name)
+  ));
+  const main = el('div', { class: 'main' });
+  main.appendChild(el('button', { class: 'btn btn-ghost', style: 'margin-bottom:12px', onclick: () => go('admin')}, '← Geri'));
+  main.appendChild(el('h1', { class: 'screen-title' }, 'Durum sorgu'));
+
+  if (!viewData) viewData = { tab: 'cart' };
+  const d = viewData;
+  const tabs = el('div', { class: 'tabs' });
+  for (const [k, label] of [['cart','Arabalar'],['job','Halılar'],['machine','Makineler']]) {
+    tabs.appendChild(el('button', { class: 'tab' + (d.tab === k ? ' active' : ''),
+      onclick: () => { d.tab = k; render(); }}, label));
+  }
+  main.appendChild(tabs);
+
+  if (d.tab === 'cart') {
+    for (const c of state.carts) {
+      const locText = c.location_type === 'MACHINE'
+        ? state.machines.find(m => m.id === c.location_id)?.name || c.location_id
+        : c.location_type === 'TRUCK'
+          ? `Kamyonda (${state.trucks.find(t => t.id === c.location_id)?.plate || ''})`
+          : 'serbest';
+      const badgeCls = c.status === 'BOS' ? 'badge-neutral'
+        : c.status === 'KAYIP' ? 'badge-danger'
+        : c.status === 'TRANSFERDE' ? 'badge-warning' : 'badge-info';
+      main.appendChild(el('div', { class: 'card' },
+        el('div', { style: 'display:flex; justify-content:space-between; gap:8px; align-items:flex-start' },
+          el('div', null,
+            el('div', { style: 'font-weight:600; font-family:Geist Mono, monospace; font-size:15px' }, c.id),
+            el('div', { style: 'font-size:13px; color:var(--ink-3); margin-top:4px' }, c.current_jobs.length ? `${c.current_jobs.length} halı` : 'boş'),
+            el('div', { style: 'font-size:12px; color:var(--ink-3); margin-top:2px' }, `Konum: ${locText}`)
+          ),
+          el('span', { class: 'badge ' + badgeCls }, c.status)
+        )
+      ));
+    }
+  } else if (d.tab === 'job') {
+    for (const j of state.jobs) {
+      const cls = j.status === 'KAYIP' ? 'badge-danger'
+        : j.status === 'TAMAMLANDI' ? 'badge-success'
+        : j.status === 'YOK' ? 'badge-neutral'
+        : 'badge-info';
+      main.appendChild(el('div', { class: 'card' },
+        el('div', { style: 'display:flex; justify-content:space-between; gap:8px' },
+          el('div', null,
+            el('div', { style: 'font-weight:600; font-family:Geist Mono, monospace' }, j.code),
+            el('div', { style: 'font-size:12px; color:var(--ink-3); margin-top:2px' }, `${j.design} · ${j.size} · ${j.customer}`),
+            el('div', { style: 'font-size:12px; color:var(--ink-3); margin-top:2px' }, `Araba: ${j.current_cart || '-'}`)
+          ),
+          el('span', { class: 'badge ' + cls }, j.status)
+        )
+      ));
+    }
+  } else if (d.tab === 'machine') {
+    for (const m of state.machines) {
+      const here = state.carts.filter(c => c.location_type === 'MACHINE' && c.location_id === m.id);
+      main.appendChild(el('div', { class: 'card' },
+        el('div', { style: 'display:flex; justify-content:space-between; gap:8px' },
+          el('div', null,
+            el('div', { style: 'font-weight:600' }, m.name),
+            el('div', { style: 'font-size:12px; color:var(--ink-3); margin-top:2px' }, m.type)
+          ),
+          el('span', { class: 'badge badge-neutral' }, `${here.length} araba`)
+        ),
+        here.length > 0 ? el('div', { class: 'item-list', style: 'margin-top:10px' },
+          ...here.map(c => el('div', { class: 'item-chip' },
+            el('div', null,
+              el('div', { class: 'item-chip-code' }, c.id),
+              el('div', { class: 'item-chip-meta' }, `${c.current_jobs.length} halı`)
+            )
+          ))
+        ) : null
+      ));
+    }
+  }
+
+  app.appendChild(main);
+}
+
+function renderEvents() {
+  app.appendChild(el('div', { class: 'topbar' },
+    el('div', { class: 'topbar-title' }, el('span', { class: 'topbar-mark' }), 'Olaylar'),
+    el('span', { class: 'topbar-user' }, state.activeOperator.name)
+  ));
+  const main = el('div', { class: 'main' });
+  main.appendChild(el('button', { class: 'btn btn-ghost', style: 'margin-bottom:12px', onclick: () => go('admin')}, '← Geri'));
+  main.appendChild(el('h1', { class: 'screen-title' }, 'Olay geçmişi'));
+  main.appendChild(el('p', { class: 'screen-sub' }, `Son ${state.events.length} olay`));
+
+  if (state.events.length === 0) {
+    main.appendChild(el('p', { style: 'text-align:center; padding:30px; color:var(--ink-3)' }, 'Henüz olay yok'));
+  } else {
+    for (const ev of state.events.slice(0, 100)) {
+      const meta = [];
+      if (ev.cart_id) meta.push(`cart=${ev.cart_id}`);
+      if (ev.machine_id) meta.push(`mac=${ev.machine_id}`);
+      if (ev.truck_id) meta.push(`trk=${ev.truck_id}`);
+      if (ev.transfer_id) meta.push(`tr=${ev.transfer_id}`);
+      if (ev.job_code) meta.push(`hali=${ev.job_code}`);
+      if (ev.jobs) meta.push(`halı=${ev.jobs.length}`);
+
+      const cls = ev.type.includes('INCOMPLETE') || ev.type.includes('LOST') ? 'alarm-card' : 'card';
+      main.appendChild(el('div', { class: cls, style: 'margin-bottom:8px' },
+        el('div', { style: 'display:flex; justify-content:space-between; gap:8px; align-items:flex-start' },
+          el('div', null,
+            el('div', { style: 'font-family:Geist Mono, monospace; font-weight:600; font-size:13px' }, ev.type),
+            el('div', { style: 'font-size:12px; color:var(--ink-3); margin-top:4px; font-family:Geist Mono, monospace' }, meta.join(' · ')),
+            el('div', { style: 'font-size:11px; color:var(--ink-3); margin-top:2px' }, ev.operator_name || '-')
+          ),
+          el('div', { style: 'font-size:11px; color:var(--ink-3); font-family:Geist Mono, monospace; white-space:nowrap' }, fmtDate(ev.timestamp))
+        )
+      ));
+    }
+  }
+  app.appendChild(main);
+}
+
+function renderQRPrint() {
+  app.appendChild(el('div', { class: 'topbar' },
+    el('div', { class: 'topbar-title' }, el('span', { class: 'topbar-mark' }), 'QR Plakaları'),
+    el('span', { class: 'topbar-user' }, state.activeOperator.name)
+  ));
+  const main = el('div', { class: 'main' });
+  main.appendChild(el('button', { class: 'btn btn-ghost', style: 'margin-bottom:12px', onclick: () => go('admin')}, '← Geri'));
+  main.appendChild(el('h1', { class: 'screen-title' }, 'QR plakaları'));
+  main.appendChild(el('p', { class: 'screen-sub' }, 'Pilot için 3 makine + 5 araba + 1 kamyon QR\'ı. Yazdır veya başka cihazda göster.'));
+
+  if (!viewData) viewData = { kind: 'cart' };
+  const d = viewData;
+  const tabs = el('div', { class: 'tabs' });
+  for (const [k, l] of [['cart','Araba'],['machine','Makine'],['truck','Kamyon'],['action','Aksiyon'],['job','Halı']]) {
+    tabs.appendChild(el('button', { class: 'tab' + (d.kind === k ? ' active' : ''),
+      onclick: () => { d.kind = k; render(); }}, l));
+  }
+  main.appendChild(tabs);
+
+  let items = [];
+  if (d.kind === 'cart') items = state.carts.map(c => ({ qr: c.qr, label: c.id, sub: 'Araba' }));
+  if (d.kind === 'machine') items = state.machines.map(m => ({ qr: m.qr, label: m.id, sub: m.name }));
+  if (d.kind === 'truck') items = state.trucks.map(t => ({ qr: t.qr, label: t.plate, sub: 'Kamyon (camda)' }));
+  if (d.kind === 'action') items = (state.actions || []).map(a => ({ qr: a.qr, label: a.name, sub: a.desc || '' }));
+  if (d.kind === 'job') items = state.jobs.map(j => ({ qr: j.code, label: j.code, sub: `${j.size} · ${j.customer}` }));
+
+  const grid = el('div', { class: 'qr-grid' });
+  for (const it of items) {
+    const tile = el('div', { class: 'qr-tile' });
+    const imgWrap = el('div', { class: 'qr-tile-img' });
+    tile.appendChild(imgWrap);
+    tile.appendChild(el('div', { class: 'qr-tile-label' }, it.label));
+    tile.appendChild(el('div', { class: 'qr-tile-sub' }, it.sub));
+    grid.appendChild(tile);
+    setTimeout(() => {
+      try { new QRCode(imgWrap, { text: it.qr, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M }); }
+      catch (e) {}
+    }, 0);
+  }
+  main.appendChild(grid);
+
+  main.appendChild(el('button', { class: 'btn', style: 'margin-top:16px', onclick: () => window.print() }, 'Yazdır'));
+
+  app.appendChild(main);
+}
+
+render();
+</script>
+</body>
+</html>
